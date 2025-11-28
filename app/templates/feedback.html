@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="feedback-title">Your Interview Feedback</h2>
+
+<div class="feedback-list">
+
+    {% for fb in feedback_list %}
+    <div class="feedback-card">
+
+        <h3 class="question">Q: {{ fb.question }}</h3>
+
+        <p class="user-response"><strong>Your Answer:</strong> {{ fb.response }}</p>
+
+        <p class="ai-feedback"><strong>AI Feedback:</strong> {{ fb.feedback }}</p>
+
+        <p class="score-box">Score: {{ fb.score }}/10</p>
+
+    </div>
+    {% endfor %}
+
+</div>
+
+<a href="/dashboard" class="btn-main" style="margin-top:20px;">Back to Dashboard</a>
+
+{% endblock %}
