@@ -1,22 +1,92 @@
 {% extends "base.html" %}
+{% block title %}Interview Practice — SmartRecruit LLM{% endblock %}
+
 {% block content %}
+<div class="card">
+  <h1 class="page-title">Interview Practice</h1>
 
-<div class="interview-container">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div style="display:flex;gap:12px;align-items:center">
+      <button id="randBtn" class="btn">Get Random Question</button>
+      <small style="color:var(--muted)">Tip: Practice different questions daily</small>
+    </div>
+    <div>
+      <a href="/progress/1" class="btn small">View Progress</a>
+    </div>
+  </div>
 
-    <h2 class="interview-title">Interview Question {{ question_number }}</h2>
+  <div id="questionBlock">
+    <h2 id="questionText" style="color:var(--accent-2)">Click <strong>Get Random Question</strong></h2>
+    <textarea id="answerBox" placeholder="Type your answer here..."></textarea>
 
-    <div class="question-box">
-        {{ question_text }}
+    <div style="display:flex;gap:12px;margin-top:12px;align-items:center">
+      <button id="subBtn" class="btn">Submit Answer</button>
+      <div id="saving" style="color:var(--muted);font-size:14px;display:none">Saving...</div>
     </div>
 
-    <form method="POST" class="interview-form">
-        <textarea name="response" placeholder="Type your answer here..." required></textarea>
-
-        <button type="submit" class="btn-main next-btn">
-            Next Question →
-        </button>
-    </form>
-
+    <div id="feedbackArea" class="feedback" style="display:none"></div>
+  </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
+<script>
+let currentQuestion = null;
+
+async function getQuestion(){
+  document.getElementById("questionText").innerText = "Loading question...";
+  const res = await fetch("/get_question");
+  const data = await res.json();
+  if (data && data.status === "success") {
+    currentQuestion = data;
+    document.getElementById("questionText").innerText = data.question;
+    document.getElementById("answerBox").value = "";
+    document.getElementById("feedbackArea").style.display = "none";
+  } else {
+    document.getElementById("questionText").innerText = "Could not fetch question.";
+  }
+}
+
+document.getElementById("randBtn").addEventListener("click", getQuestion);
+
+document.getElementById("subBtn").addEventListener("click", async () => {
+  if (!currentQuestion) { toast("Get a question first"); return; }
+  const ans = document.getElementById("answerBox").value || "";
+
+  // Analyse
+  const resp = await fetch("/analyse_answer", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      question_id: currentQuestion.question_id,
+      answer: ans,
+      expected_keywords: currentQuestion.keywords || []
+    })
+  });
+  const result = await resp.json();
+
+  // Show feedback
+  const fb = document.getElementById("feedbackArea");
+  fb.style.display = "block";
+  fb.innerHTML = `<strong>Feedback:</strong><br>${result.final_feedback}`;
+
+  // Save progress
+  document.getElementById("saving").style.display = "inline";
+  await fetch("/save_progress", {
+    method:"POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      user_id: 1,
+      question_id: currentQuestion.question_id,
+      answer: ans,
+      final_feedback: result.final_feedback,
+      score: result.keyword_score,
+      sentiment: result.sentiment_score,
+      keywords: currentQuestion.keywords || []
+    })
+  });
+  document.getElementById("saving").style.display = "none";
+  toast("Answer saved");
+});
+</script>
 {% endblock %}

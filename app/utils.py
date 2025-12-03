@@ -1,21 +1,25 @@
-import random
 import nltk
+import random
+import string
+
 from nltk.sentiment import SentimentIntensityAnalyzer
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-import string
 
-# Download NLTK data (only first time)
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('vader_lexicon')
+# ---------------------------------------------------
+# DOWNLOAD REQUIRED NLTK DATA (fixes punkt_tab error)
+# ---------------------------------------------------
+nltk.download("punkt", quiet=True)
+nltk.download("punkt_tab", quiet=True)  # <--- IMPORTANT FIX
+nltk.download("stopwords", quiet=True)
+nltk.download("vader_lexicon", quiet=True)
 
+# Initialize tools
 sia = SentimentIntensityAnalyzer()
 stop_words = set(stopwords.words("english"))
 
-
 # ---------------------------------------------------
-# QUESTION BANK (Company + General)
+# QUESTION BANK (General + HR + Company-specific)
 # ---------------------------------------------------
 QUESTION_BANK = [
     # General Technical
@@ -39,7 +43,7 @@ QUESTION_BANK = [
 
 
 # ---------------------------------------------------
-# CLEAN TEXT (remove noise)
+# CLEAN TEXT FUNCTION
 # ---------------------------------------------------
 def clean_text(text):
     text = text.lower()
@@ -50,11 +54,11 @@ def clean_text(text):
 
 
 # ---------------------------------------------------
-# SENTIMENT ANALYSIS (confidence detection)
+# SENTIMENT ANALYSIS SCORE (confidence)
 # ---------------------------------------------------
 def get_sentiment_score(text):
     score = sia.polarity_scores(text)
-    return score["compound"]  # ranges from -1 to +1
+    return score["compound"]   # -1 to +1
 
 
 # ---------------------------------------------------
@@ -71,7 +75,7 @@ def keyword_score(answer, required_keywords):
     if len(required_keywords) == 0:
         return 0
 
-    return round((matched / len(required_keywords)) * 10, 2)  # Score out of 10
+    return round((matched / len(required_keywords)) * 10, 2)  # score /10
 
 
 # ---------------------------------------------------
@@ -82,11 +86,10 @@ def generate_feedback(question, answer, required_keywords):
     sscore = get_sentiment_score(answer)
 
     feedback = []
-
     feedback.append(f"Keyword Score: {kscore}/10")
     feedback.append(f"Confidence (Sentiment) Score: {round((sscore + 1) * 5, 2)}/10")
 
-    # Specific comments
+    # Additional comments
     if kscore < 5:
         feedback.append("Include more domain-specific keywords in your answer.")
     else:
@@ -98,6 +101,7 @@ def generate_feedback(question, answer, required_keywords):
         feedback.append("Your answer reflects good confidence.")
 
     final_feedback = " | ".join(feedback)
+
     return {
         "keyword_score": kscore,
         "sentiment_score": sscore,
@@ -106,7 +110,7 @@ def generate_feedback(question, answer, required_keywords):
 
 
 # ---------------------------------------------------
-# RANDOM QUESTION GENERATOR (Daily Booster)
+# DAILY BOOSTER — RANDOM QUESTION
 # ---------------------------------------------------
 def get_random_question():
     return random.choice(QUESTION_BANK)

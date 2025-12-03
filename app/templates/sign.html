@@ -1,60 +1,211 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="auth-container">
 
+<div class="glass-bg">
     <div class="auth-card">
-        <h2>Welcome</h2>
-        <p class="sub">Sign in or Create an Account</p>
 
-        <form method="POST">
+        <h2 class="auth-title">Welcome Back</h2>
+        <p class="auth-sub">Sign in or create a new account</p>
 
+        {% if error %}
+        <div class="error-box">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" id="authForm">
             <input type="hidden" name="action" id="action" value="signin">
 
-            <div id="signup-fields" style="display:none;">
-                <input type="text" name="first_name" placeholder="First Name">
-                <input type="text" name="last_name" placeholder="Last Name">
-                <input type="text" name="company_name" placeholder="Company Name">
-                <input type="email" name="email" placeholder="Email">
-                <input type="text" name="phone_number" placeholder="Phone Number">
-                <input type="date" name="birthday">
-                <input type="password" name="password" placeholder="Password">
-                <input type="password" name="confirm_password" placeholder="Confirm Password">
-            </div>
-
+            <!-- SIGN IN FIELDS -->
             <div id="signin-fields">
-                <input type="email" name="email" placeholder="Email">
-                <input type="password" name="password" placeholder="Password">
+                <input type="email" name="email_login" class="glass-input" placeholder="Email" required>
+                <input type="password" name="password_login" class="glass-input" placeholder="Password" required>
             </div>
 
-            <button type="submit" class="btn-main">Continue</button>
+            <!-- SIGN UP FIELDS -->
+            <div id="signup-fields" style="display:none;">
+                <input type="text" name="first_name" class="glass-input" placeholder="First Name">
+                <input type="text" name="last_name" class="glass-input" placeholder="Last Name">
+                <input type="text" name="phone_number" class="glass-input" placeholder="Phone Number">
+                <input type="date" name="birthday" class="glass-input">
+                <input type="email" name="email_signup" class="glass-input" placeholder="Email">
+                <input type="password" name="password_signup" class="glass-input" placeholder="Password">
+                <input type="password" name="confirm_password" class="glass-input" placeholder="Confirm Password">
+            </div>
+
+            <button type="submit" class="btn-glass">Continue</button>
         </form>
 
-        <p id="toggle-text">
-            Don't have an account? <a href="#" id="toggle-link">Sign Up</a>
+        <p class="toggle-text">
+            Don’t have an account?
+            <a href="#" id="toggle-link">Sign Up</a>
         </p>
 
     </div>
 </div>
 
+<!-- --------------------------------
+     KEEPING YOUR EXACT LOGIC — UNCHANGED
+----------------------------------- -->
 <script>
-document.getElementById("toggle-link").onclick = function() {
-    let action = document.getElementById("action");
-    let signup = document.getElementById("signup-fields");
-    let signin = document.getElementById("signin-fields");
-    let text = document.getElementById("toggle-text");
+function attachToggle() {
+    document.getElementById("toggle-link").addEventListener("click", function (e) {
+        e.preventDefault();
 
-    if (action.value === "signin") {
-        action.value = "signup";
-        signup.style.display = "block";
-        signin.style.display = "none";
-        text.innerHTML = 'Already have an account? <a href="#" id="toggle-link">Sign In</a>';
-    } else {
-        action.value = "signin";
-        signup.style.display = "none";
-        signin.style.display = "block";
-        text.innerHTML = 'Don\'t have an account? <a href="#" id="toggle-link">Sign Up</a>';
-    }
-};
+        let action = document.getElementById("action");
+        let signup = document.getElementById("signup-fields");
+        let signin = document.getElementById("signin-fields");
+        let text = document.querySelector(".toggle-text");
+
+        if (action.value === "signin") {
+            action.value = "signup";
+            signup.style.display = "block";
+            signin.style.display = "none";
+
+            text.innerHTML = `Already have an account? <a href="#" id="toggle-link">Sign In</a>`;
+        } else {
+            action.value = "signin";
+            signup.style.display = "none";
+            signin.style.display = "block";
+
+            text.innerHTML = `Don’t have an account? <a href="#" id="toggle-link">Sign Up</a>`;
+        }
+
+        attachToggle(); 
+    });
+}
+attachToggle();
 </script>
+
+<!-- --------------------------------
+     PREMIUM BLUE GLASSMORPHISM THEME
+----------------------------------- -->
+<style>
+
+/* Background gradient + blur orbs */
+.glass-bg {
+    height: 88vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #1a73e8 0%, #4da7ff 40%, #b3e5fc 100%);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Decorative blur circles */
+.glass-bg::before {
+    content: "";
+    position: absolute;
+    top: -80px;
+    right: -120px;
+    width: 480px;
+    height: 480px;
+    background: rgba(255,255,255,0.25);
+    filter: blur(80px);
+    border-radius: 50%;
+}
+
+.glass-bg::after {
+    content: "";
+    position: absolute;
+    bottom: -120px;
+    left: -100px;
+    width: 450px;
+    height: 450px;
+    background: rgba(255,255,255,0.15);
+    filter: blur(120px);
+    border-radius: 50%;
+}
+
+/* Glass authentication card */
+.auth-card {
+    width: 420px;
+    padding: 40px;
+    border-radius: 22px;
+
+    background: rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(22px);
+    border: 1px solid rgba(255,255,255,0.35);
+
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    text-align: center;
+
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(25px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Titles */
+.auth-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: white;
+}
+.auth-sub {
+    color: #e8f1ff;
+    margin-bottom: 20px;
+}
+
+/* Inputs */
+.glass-input {
+    width: 100%;
+    padding: 13px 15px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+
+    background: rgba(255,255,255,0.45);
+    border: 1px solid rgba(255,255,255,0.35);
+    backdrop-filter: blur(10px);
+
+    font-size: 15px;
+    transition: 0.3s ease;
+}
+.glass-input:focus {
+    outline: none;
+    background: rgba(255,255,255,0.65);
+    border-color: white;
+    box-shadow: 0 0 10px rgba(255,255,255,0.6);
+}
+
+/* Button */
+.btn-glass {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #0d6efd, #1a73e8);
+    border: none;
+    color: white;
+    font-size: 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.25s;
+}
+.btn-glass:hover {
+    background: linear-gradient(135deg, #1559c8, #0b56c9);
+    transform: translateY(-2px);
+}
+
+/* Toggle text */
+.toggle-text {
+    color: white;
+    margin-top: 15px;
+}
+.toggle-text a {
+    color: #002fff;
+    font-weight: bold;
+}
+
+/* Error */
+.error-box {
+    background: rgba(255, 77, 77, 0.3);
+    border-left: 4px solid red;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    color: white;
+}
+
+</style>
 
 {% endblock %}

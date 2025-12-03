@@ -1,190 +1,233 @@
-from flask import Blueprint, request, jsonify, session
-from datetime import datetime, date
+from flask import (
+    Blueprint, request, jsonify, session, render_template,
+    redirect, url_for, flash
+)
+from datetime import date
+from werkzeug.security import generate_password_hash, check_password_hash
+
 from . import db
 from .models import User, Progress
-from .utils import (
-    get_random_question,
-    analyse_answer_keywords,
-    analyse_sentiment,
-    generate_feedback_text
-)
+from .utils import generate_feedback, get_random_question, get_question_by_id
 
 main = Blueprint('main', __name__)
 
+# ---------------------------------------------------
+# AUTHENTICATION ROUTES (FIXED & CLEAN)
+# ---------------------------------------------------
+
+@main.route("/sign", methods=["GET", "POST"])
+def sign_page():
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        # -----------------------------------------
+        # SIGNUP (CREATE ACCOUNT)
+        # -----------------------------------------
+        if action == "signup":
+            first = request.form.get("first_name")
+            last = request.form.get("last_name")
+            email = request.form.get("email_signup")
+            phone = request.form.get("phone_number")
+            birthday = request.form.get("birthday")
+            password = request.form.get("password_signup")
+            confirm = request.form.get("confirm_password")
+
+            # Validate password match
+            if password != confirm:
+                return render_template("sign.html", error="Passwords do not match")
+
+            # Check existing user
+            if User.query.filter_by(email=email).first():
+                return render_template("sign.html", error="Email already exists!")
+
+            # Create user
+            user = User(
+                first_name=first,
+                last_name=last,
+                email=email,
+                phone_number=phone,
+                birthday=birthday,
+                password=generate_password_hash(password),
+                streak=0,
+                total_answers=0,
+                points=0
+            )
+            db.session.add(user)
+            db.session.commit()
+
+            # Auto login
+            session["user_id"] = user.id
+            session["user_name"] = user.first_name
+
+            return redirect(url_for("main.dashboard_page"))
+
+        # -----------------------------------------
+        # SIGNIN (LOGIN)
+        # -----------------------------------------
+        elif action == "signin":
+            email = request.form.get("email_login")
+            password = request.form.get("password_login")
+
+            user = User.query.filter_by(email=email).first()
+
+            if not user:
+                return render_template("sign.html", error="Account does not exist")
+            if not check_password_hash(user.password, password):
+                return render_template("sign.html", error="Wrong password")
+            session["user_id"] = user.id
+            session["user_name"] = user.first_name
+
+            return redirect(url_for("main.dashboard_page"))
+
+    return render_template("sign.html")
+
+
+
+@main.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("main.sign_page"))
+
 
 # ---------------------------------------------------
-# BASIC ROOT ENDPOINT
+# FRONTEND PAGES
 # ---------------------------------------------------
-@main.route('/')
+
+@main.route("/")
 def home():
-    return jsonify({"status": "API running", "message": "Smart Interview Assistant Backend"})
+    return render_template("base.html")
+
+
+@main.route("/dashboard")
+def dashboard_page():
+    if "user_id" not in session:
+        return redirect(url_for("main.sign_page"))
+
+    return render_template("dashboard.html", user_id=session["user_id"])
+
+
+@main.route("/interview")
+def interview_page():
+    if "user_id" not in session:
+        return redirect(url_for("main.sign_page"))
+
+    return render_template("interview_questions.html")
+
+
+@main.route("/feedback")
+def feedback_page():
+    return render_template("feedback.html")
 
 
 # ---------------------------------------------------
-# AUTH CHECK (optional use)
+# PROGRESS PAGE (REVIEW RESPONSES)
 # ---------------------------------------------------
-@main.before_app_request
-def load_user():
-    user_id = session.get("user_id")
-    if user_id:
-        session["user_id"] = user_id
 
-
-# ---------------------------------------------------
-# GET A RANDOM INTERVIEW QUESTION
-# ---------------------------------------------------
-@main.route('/get_question', methods=['GET'])
-def get_question():
-    question = get_random_question()
-    return jsonify({
-        "status": "success",
-        "question_id": question["id"],
-        "question": question["text"],
-        "keywords": question["keywords"]
-    })
-
-
-# ---------------------------------------------------
-# DAILY BOOSTER QUESTION
-# ---------------------------------------------------
-@main.route('/daily_question/<int:user_id>', methods=['GET'])
-def daily_question(user_id):
+@main.route("/progress/<int:user_id>")
+def progress_page(user_id):
     user = User.query.get(user_id)
     if not user:
-        return jsonify({"status": "error", "message": "User not found"}), 404
+        return render_template("review_responses.html", feedback_list=[])
 
-    today_str = date.today().isoformat()
+    records = Progress.query.filter_by(user_id=user_id).all()
 
-    # same question allowed for whole day
-    if user.last_answered != today_str:
-        # new day → generate a new question
-        q = get_random_question()
-        session['daily_q'] = q
-        return jsonify({
-            "status": "new_question",
-            "question_id": q["id"],
-            "question": q["text"],
-            "keywords": q["keywords"]
+    feedback_list = []
+    for r in records:
+        q = get_question_by_id(r.question_id)
+
+        feedback_list.append({
+            "question": q["question"] if q else "Unknown",
+            "answer": r.answer,
+            "feedback": r.feedback_text,
+            "score": r.score,
+            "sentiment": r.sentiment,
+            "keywords": r.keywords,
+            "time": r.timestamp.strftime("%Y-%m-%d %H:%M")
         })
 
-    # same question
-    if 'daily_q' in session:
-        q = session['daily_q']
-        return jsonify({
-            "status": "same_question",
-            "question_id": q["id"],
-            "question": q["text"],
-            "keywords": q["keywords"]
-        })
+    return render_template("review_responses.html", feedback_list=feedback_list)
 
-    # fallback
+
+# ---------------------------------------------------
+# API ROUTES
+# ---------------------------------------------------
+
+@main.route('/get_question')
+def get_question():
     q = get_random_question()
-    session['daily_q'] = q
+
+    if not q:
+        return jsonify({"status": "error", "message": "No questions available"}), 404
+
     return jsonify({
-        "status": "new_question",
+        "status": "success",
         "question_id": q["id"],
-        "question": q["text"],
+        "question": q["question"],
         "keywords": q["keywords"]
     })
 
 
-# ---------------------------------------------------
-# ANALYSE ANSWER
-# ---------------------------------------------------
-@main.route('/analyse_answer', methods=['POST'])
+
+@main.route("/analyse_answer", methods=["POST"])
 def analyse_answer():
     data = request.json
+    q = get_question_by_id(data["question_id"])
 
-    answer = data.get("answer", "")
-    expected_keywords = data.get("expected_keywords", [])
-    question_id = data.get("question_id", "")
-
-    # keyword check
-    keyword_score, found_keywords = analyse_answer_keywords(answer, expected_keywords)
-
-    # sentiment
-    sentiment_score = analyse_sentiment(answer)
-
-    # feedback text
-    feedback = generate_feedback_text(found_keywords, expected_keywords, sentiment_score)
+    result = generate_feedback(q["question"], data["answer"], data["expected_keywords"])
 
     return jsonify({
         "status": "success",
-        "keyword_score": keyword_score,
-        "sentiment_score": sentiment_score,
-        "keywords_found": found_keywords,
-        "feedback": feedback
+        "keyword_score": result["keyword_score"],
+        "sentiment_score": result["sentiment_score"],
+        "final_feedback": result["final_feedback"]
     })
 
 
-# ---------------------------------------------------
-# SAVE PROGRESS
-# ---------------------------------------------------
-@main.route('/save_progress', methods=['POST'])
+@main.route("/save_progress", methods=["POST"])
 def save_progress():
     data = request.json
-    user_id = data.get("user_id")
-    question_id = data.get("question_id")
-    score = data.get("score")
-    sentiment = data.get("sentiment")
-    keywords = data.get("keywords")
 
-    if not user_id:
-        return jsonify({"status": "error", "message": "No user ID"}), 400
+    user_id = data["user_id"]
+    user = User.query.get(user_id)
 
     progress = Progress(
         user_id=user_id,
-        question_id=question_id,
-        score=score,
-        sentiment=sentiment,
-        keywords=",".join(keywords)
+        question_id=data["question_id"],
+        answer=data["answer"],
+        feedback_text=data["final_feedback"],
+        score=data["score"],
+        sentiment=data["sentiment"],
+        keywords=",".join(data["keywords"])
     )
 
     db.session.add(progress)
-    db.session.commit()
 
-    # update streaks
-    user = User.query.get(user_id)
-    today_str = date.today().isoformat()
+    today = date.today().isoformat()
 
-    if user.last_answered != today_str:
+    if user.last_answered != today:
         user.streak += 1
-        user.last_answered = today_str
+        user.last_answered = today
 
     user.total_answers += 1
-    user.points += int(score)
+    user.points += int(data["score"])
 
     db.session.commit()
 
-    return jsonify({"status": "success", "message": "Progress saved"})
+    return jsonify({"status": "success"})
 
 
-# ---------------------------------------------------
-# GET DASHBOARD DATA (for charts)
-# ---------------------------------------------------
-@main.route('/get_progress/<int:user_id>', methods=['GET'])
+@main.route("/get_progress/<int:user_id>")
 def get_progress_data(user_id):
     user = User.query.get(user_id)
-    if not user:
-        return jsonify({"status": "error", "message": "User not found"}), 404
-
     records = Progress.query.filter_by(user_id=user_id).all()
-
-    score_list = []
-    sentiment_list = []
-    keyword_counts = []
-
-    for r in records:
-        score_list.append(r.score)
-        sentiment_list.append(r.sentiment)
-        keyword_counts.append(len(r.keywords.split(",")) if r.keywords else 0)
 
     return jsonify({
         "status": "success",
         "streak": user.streak,
         "total_answers": user.total_answers,
         "points": user.points,
-        "scores": score_list,
-        "sentiment": sentiment_list,
-        "keyword_counts": keyword_counts
+        "scores": [r.score for r in records],
+        "sentiment": [r.sentiment for r in records],
+        "keyword_counts": [len(r.keywords.split(",")) for r in records]
     })

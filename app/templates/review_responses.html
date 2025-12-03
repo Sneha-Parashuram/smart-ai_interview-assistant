@@ -1,34 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Review Responses</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+<meta charset="UTF-8">
+<title>Review Responses</title>
+
+<style>
+    body {
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(135deg, #edf3ff, #ffffff);
+        padding: 40px;
+    }
+
+    h1 {
+        text-align: center;
+        font-size: 36px;
+        color: #1c4a75;
+        margin-bottom: 30px;
+        font-weight: 700;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #ffffff;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        animation: fadeIn 0.7s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity:0; transform: translateY(20px); }
+        to { opacity:1; transform: translateY(0); }
+    }
+
+    th {
+        background-color: #1a73e8;
+        color: white;
+        padding: 16px;
+        font-size: 16px;
+        text-align: left;
+    }
+
+    td {
+        padding: 14px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 14px;
+        color: #333;
+    }
+
+    tr:hover {
+        background-color: #f5faff;
+        transition: 0.2s;
+    }
+</style>
+
 </head>
+
 <body>
-    <div class="container">
-        <h1>Review Responses</h1>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th>Question</th>
-                    <th>Response</th>
-                    <th>Feedback</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for feedback in feedback_list %}
-                <tr>
-                    <td>{{ feedback.question }}</td>
-                    <td>{{ feedback.response }}</td>
-                    <td>{{ feedback.feedback }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-    </div>
+
+<h1>Review Responses</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Question</th>
+            <th>Your Answer</th>
+            <th>Feedback</th>
+            <th>Score</th>
+            <th>Sentiment</th>
+            <th>Keywords</th>
+            <th>Time</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for fb in feedback_list %}
+        <tr>
+            <td>{{ fb.question }}</td>
+            <td>{{ fb.answer }}</td>
+            <td>{{ fb.feedback }}</td>
+            <td>{{ fb.score }}</td>
+            <td>{{ fb.sentiment }}</td>
+            <td>{{ fb.keywords }}</td>
+            <td>{{ fb.time }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
 </body>
 </html>

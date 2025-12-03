@@ -1,47 +1,69 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title if title else "AI Interview Assistant" }}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}SmartRecruit LLM{% endblock %}</title>
 
-    <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <!-- Google font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Global CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  {% block head %}{% endblock %}
 </head>
 
-<body>
-    <nav class="navbar">
-        <div class="nav-left">
-            <a href="/" class="logo">AI Interview Assistant</a>
-        </div>
+<body class="site">
 
-        <div class="nav-right">
-            {% if g.user %}
-                <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('main.settings') }}">Settings</a>
-                <a href="{{ url_for('main.logout') }}" class="logout-btn">Logout</a>
-            {% else %}
-                <a href="{{ url_for('main.auth') }}">Login</a>
-            {% endif %}
-        </div>
-    </nav>
+  <!-- ================= NAVBAR ================= -->
+  <header class="site-header">
+    <div class="wrap">
 
-    <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash flash-{{ category }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+      <a class="brand" href="{{ url_for('main.home') }}">SmartRecruit LLM</a>
 
-        {% block content %}{% endblock %}
+      <nav class="nav">
+
+        <a href="{{ url_for('main.home') }}">Home</a>
+        <a href="{{ url_for('main.interview_page') }}">Practice</a>
+
+        {% if session.get('user_id') %}
+            <a href="{{ url_for('main.progress_page', user_id=session.get('user_id')) }}">Review</a>
+            <a href="{{ url_for('main.dashboard_page') }}">Dashboard</a>
+
+            <span class="nav-user">Hi, {{ session.get('user_name', 'User') }}</span>
+
+            <a href="{{ url_for('main.logout') }}" class="logout-btn">Logout</a>
+
+        {% else %}
+            <a href="{{ url_for('main.sign_page') }}">Login / Signup</a>
+        {% endif %}
+
+      </nav>
     </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT AREA ================= -->
+  <main class="main-wrap">
+    <div class="wrap">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>© SmartRecruit LLM — Built for your Project</div>
+      <div>Made with ♥ using Flask + LLM</div>
+    </div>
+  </footer>
+
+  <!-- Main JS -->
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
+  {% block scripts %}{% endblock %}
 
 </body>
 </html>

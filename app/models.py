@@ -1,36 +1,39 @@
-from . import db
+# app/models.py
 from datetime import datetime
+from . import db
+from werkzeug.security import generate_password_hash, check_password_hash
+from . import db
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    first_name = db.Column(db.String(100), nullable=False)
-    last_name = db.Column(db.String(100), nullable=False)
-    company_name = db.Column(db.String(100), nullable=False)
+
+    first_name = db.Column(db.String(100))
+    last_name = db.Column(db.String(100))
+
     email = db.Column(db.String(120), unique=True, nullable=False)
-    phone_number = db.Column(db.String(15), nullable=False)
-    birthday = db.Column(db.String(10), nullable=False)
-    password = db.Column(db.String(60), nullable=False)
-    cv_file = db.Column(db.String(120)) 
-    profile_photo = db.Column(db.String(120)) 
 
-class Job(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    location = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    salary = db.Column(db.String(50), nullable=False)  
-    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    password = db.Column(db.String(255), nullable=False)   # <-- YOU WERE MISSING THIS!
 
-class Application(db.Model):
+    phone_number = db.Column(db.String(20))
+    birthday = db.Column(db.String(20))
+
+    streak = db.Column(db.Integer, default=0)
+    total_answers = db.Column(db.Integer, default=0)
+    points = db.Column(db.Integer, default=0)
+
+    last_answered = db.Column(db.String(20))
+
+
+class Progress(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
-    message = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    question_id = db.Column(db.String(10))
+
+    answer = db.Column(db.Text)          # user answer
+    feedback_text = db.Column(db.Text)   # final feedback from AI
+    keywords = db.Column(db.String(200))
+
+    score = db.Column(db.Float, default=0)
+    sentiment = db.Column(db.Float, default=0)
+
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), nullable=False, default='Pending')
-
-    user = db.relationship('User', backref=db.backref('applications', lazy=True))
-    job = db.relationship('Job', backref=db.backref('applications', lazy=True))
-
-    __table_args__ = (db.UniqueConstraint('user_id', 'job_id', name='unique_user_job_application'),)
